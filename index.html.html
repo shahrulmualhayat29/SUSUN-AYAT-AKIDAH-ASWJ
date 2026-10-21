@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Susun Ayat Akidah - Permainan Interaktif PAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #F3F4F6;
+            background-image: radial-gradient(#E5E7EB 2px, transparent 2px);
+            background-size: 30px 30px;
+            overflow-x: hidden;
+        }
+        
+        .word-tile {
+            touch-action: none; /* Prevents screen from scrolling when dragging */
+            user-select: none;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+
+        .word-tile:hover {
+            transform: scale(1.05);
+        }
+
+        .word-tile:active, .word-tile.dragging {
+            transform: scale(1.1) rotate(-2deg);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+            cursor: grabbing !important;
+            z-index: 1000;
+        }
+
+        .in-bank {
+            position: absolute;
+            cursor: grab;
+        }
+
+        .in-dropzone {
+            position: relative;
+            cursor: pointer;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-4 px-2 sm:px-6">
+
+    <header class="w-full max-w-7xl flex flex-col sm:flex-row justify-between items-center mb-4 glass-panel rounded-3xl p-4 shadow-sm">
+        <div class="flex items-center gap-3 mb-4 sm:mb-0">
+            <div class="bg-indigo-100 text-indigo-600 p-3 rounded-2xl">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl sm:text-2xl font-extrabold text-slate-800">Susun Ayat Akidah (2 Pemain)</h1>
+                <p class="text-xs sm:text-sm font-semibold text-slate-500">Berlumba untuk menyusun ayat yang tepat!</p>
+            </div>
+        </div>
+        <div class="flex gap-4 items-center">
+            <div class="bg-blue-100 border-2 border-blue-300 px-5 py-2 rounded-2xl text-center shadow-inner">
+                <span class="block text-xs font-bold text-blue-500 uppercase tracking-wider">Skor P1</span>
+                <span class="text-2xl font-black text-blue-700" id="p1-score-display">0</span>
+            </div>
+            <div class="bg-pink-100 border-2 border-pink-300 px-5 py-2 rounded-2xl text-center shadow-inner">
+                <span class="block text-xs font-bold text-pink-500 uppercase tracking-wider">Skor P2</span>
+                <span class="text-2xl font-black text-pink-700" id="p2-score-display">0</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="w-full max-w-7xl flex-grow flex flex-col lg:flex-row gap-6">
+        
+        <!-- KAWASAN PEMAIN 1 -->
+        <div class="flex-1 flex flex-col gap-4 bg-blue-50/50 border-4 border-blue-200 rounded-3xl p-4 shadow-sm relative overflow-hidden">
+            <div class="flex justify-between items-center bg-blue-100 p-3 rounded-2xl border-2 border-blue-200">
+                <h2 class="text-lg font-extrabold text-blue-700">🟦 Pemain 1</h2>
+                <div id="p1-feedback" class="text-sm font-bold opacity-0 transition-opacity duration-300"></div>
+            </div>
+
+            <div class="relative w-full flex-grow flex flex-col gap-4">
+                <div id="p1-word-bank" class="relative w-full h-48 sm:h-56 bg-white border-2 border-dashed border-blue-300 rounded-2xl overflow-hidden shadow-inner">
+                    <!-- Perkataan P1 -->
+                </div>
+
+                <div id="p1-drop-zone" class="w-full min-h-[120px] bg-blue-100 border-2 border-dashed border-blue-400 rounded-2xl p-4 flex flex-wrap content-start items-start gap-2 shadow-inner">
+                    <p id="p1-drop-placeholder" class="w-full text-center text-blue-400 font-bold text-sm mt-4 pointer-events-none">
+                        Tarik perkataan ke sini...
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex gap-2 justify-center mt-auto">
+                <button id="p1-btn-check" class="w-full bg-emerald-400 text-white hover:bg-emerald-500 font-bold py-3 px-4 rounded-xl transition-transform transform active:scale-95 shadow-md">
+                    Semak P1
+                </button>
+                <button id="p1-btn-next" class="hidden w-full bg-blue-500 text-white hover:bg-blue-600 font-bold py-3 px-4 rounded-xl transition-transform transform active:scale-95 shadow-md">
+                    Soalan Seterusnya!
+                </button>
+            </div>
+        </div>
+
+        <!-- KAWASAN PEMAIN 2 -->
+        <div class="flex-1 flex flex-col gap-4 bg-pink-50/50 border-4 border-pink-200 rounded-3xl p-4 shadow-sm relative overflow-hidden">
+            <div class="flex justify-between items-center bg-pink-100 p-3 rounded-2xl border-2 border-pink-200">
+                <h2 class="text-lg font-extrabold text-pink-700">🟥 Pemain 2</h2>
+                <div id="p2-feedback" class="text-sm font-bold opacity-0 transition-opacity duration-300"></div>
+            </div>
+
+            <div class="relative w-full flex-grow flex flex-col gap-4">
+                <div id="p2-word-bank" class="relative w-full h-48 sm:h-56 bg-white border-2 border-dashed border-pink-300 rounded-2xl overflow-hidden shadow-inner">
+                    <!-- Perkataan P2 -->
+                </div>
+
+                <div id="p2-drop-zone" class="w-full min-h-[120px] bg-pink-100 border-2 border-dashed border-pink-400 rounded-2xl p-4 flex flex-wrap content-start items-start gap-2 shadow-inner">
+                    <p id="p2-drop-placeholder" class="w-full text-center text-pink-400 font-bold text-sm mt-4 pointer-events-none">
+                        Tarik perkataan ke sini...
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex gap-2 justify-center mt-auto">
+                <button id="p2-btn-check" class="w-full bg-emerald-400 text-white hover:bg-emerald-500 font-bold py-3 px-4 rounded-xl transition-transform transform active:scale-95 shadow-md">
+                    Semak P2
+                </button>
+                <button id="p2-btn-next" class="hidden w-full bg-pink-500 text-white hover:bg-pink-600 font-bold py-3 px-4 rounded-xl transition-transform transform active:scale-95 shadow-md">
+                    Soalan Seterusnya!
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const sentences = [
+            "Nama lain bagi ASWJ ialah Ahlu al-Hadis dan Salafus soleh.",
+            "Kumpulan majoriti umat Islam berpegang pada al-Quran dan Al-Sunnah.",
+            "ASWJ meyakini kewujudan perkara ghaib seperti hari akhirat.",
+            "Syurga dan neraka telah wujud sebelum dijadikan makhluk.",
+            "Syiah menuntut Sayidina Ali dilantik sebagai khalifah selepas Rasulullah.",
+            "Syiah menyanjung Sayidina Ali secara keterlaluan sehingga disamakan dengan Rasulullah.",
+            "Khawarij berpaling tadah kerana tidak berpuas hati dengan Majlis Tahkim.",
+            "Khawarij beriktikad pelaku maksiat dikira berdosa besar dan kafir.",
+            "Muktazilah diasaskan oleh Wasil Bin Ata setelah berbeza pendapat.",
+            "Muktazilah meyakini manusia bertanggungjawab sepenuhnya atas perbuatan mereka."
+        ];
+
+        // Struktur data untuk 2 pemain
+        const p1 = {
+            id: 'p1',
+            score: 0,
+            currentSentence: "",
+            wordObjects: [],
+            animFrameId: null,
+            elements: {
+                bank: document.getElementById('p1-word-bank'),
+                drop: document.getElementById('p1-drop-zone'),
+                placeholder: document.getElementById('p1-drop-placeholder'),
+                btnCheck: document.getElementById('p1-btn-check'),
+                btnNext: document.getElementById('p1-btn-next'),
+                feedback: document.getElementById('p1-feedback'),
+                scoreDisplay: document.getElementById('p1-score-display')
+            },
+            styles: {
+                tileBg: 'bg-blue-500',
+                tileText: 'text-white'
+            }
+        };
+
+        const p2 = {
+            id: 'p2',
+            score: 0,
+            currentSentence: "",
+            wordObjects: [],
+            animFrameId: null,
+            elements: {
+                bank: document.getElementById('p2-word-bank'),
+                drop: document.getElementById('p2-drop-zone'),
+                placeholder: document.getElementById('p2-drop-placeholder'),
+                btnCheck: document.getElementById('p2-btn-check'),
+                btnNext: document.getElementById('p2-btn-next'),
+                feedback: document.getElementById('p2-feedback'),
+                scoreDisplay: document.getElementById('p2-score-display')
+            },
+            styles: {
+                tileBg: 'bg-pink-500',
+                tileText: 'text-white'
+            }
+        };
+
+        const activeDrags = {}; // Simpan status 'drag' berdasarkan pointerId untuk menyokong Multi-touch
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function getRandomVelocity() {
+            const minSpeed = 0.3;
+            const maxSpeed = 1.0;
+            let speed = Math.random() * (maxSpeed - minSpeed) + minSpeed;
+            return speed * (Math.random() > 0.5 ? 1 : -1);
+        }
+
+        function loadQuestionForPlayer(player) {
+            // Bersihkan keadaan lama
+            player.wordObjects = [];
+            player.elements.bank.innerHTML = '';
+            
+            Array.from(player.elements.drop.children).forEach(child => {
+                if (child.id !== player.elements.placeholder.id) child.remove();
+            });
+            
+            player.elements.placeholder.style.display = 'block';
+            player.elements.feedback.style.opacity = '0';
+            player.elements.btnNext.classList.add('hidden');
+            player.elements.btnCheck.classList.remove('hidden');
+
+            // Pilih soalan rawak
+            player.currentSentence = sentences[Math.floor(Math.random() * sentences.length)];
+            const rawWords = player.currentSentence.split(" ");
+            const shuffledWords = shuffleArray([...rawWords]);
+
+            const bankRect = player.elements.bank.getBoundingClientRect();
+
+            shuffledWords.forEach((wordText, index) => {
+                const el = document.createElement('div');
+                el.className = `word-tile in-bank ${player.styles.tileBg} ${player.styles.tileText} font-bold px-4 py-2 text-sm sm:text-base rounded-xl shadow-md border-2 border-white/50`;
+                el.innerText = wordText;
+                el.dataset.text = wordText;
+                
+                el.style.opacity = '0';
+                player.elements.bank.appendChild(el);
+
+                setTimeout(() => {
+                    const rect = el.getBoundingClientRect();
+                    const w = rect.width;
+                    const h = rect.height;
+                    
+                    const x = Math.random() * Math.max(10, bankRect.width - w - 20) + 10;
+                    const y = Math.random() * Math.max(10, bankRect.height - h - 20) + 10;
+                    
+                    el.style.left = x + 'px';
+                    el.style.top = y + 'px';
+                    el.style.opacity = '1';
+
+                    const wordObj = {
+                        el: el,
+                        text: wordText,
+                        w: w,
+                        h: h,
+                        x: x,
+                        y: y,
+                        vx: getRandomVelocity(),
+                        vy: getRandomVelocity(),
+                        isDragging: false,
+                        isDropped: false,
+                        player: player 
+                    };
+                    
+                    player.wordObjects.push(wordObj);
+                    attachPointerEvents(wordObj);
+                }, 0);
+            });
+
+            if (player.animFrameId) cancelAnimationFrame(player.animFrameId);
+            player.animFrameId = requestAnimationFrame(() => animateWords(player));
+        }
+
+        function animateWords(player) {
+            const bankRect = player.elements.bank.getBoundingClientRect();
+
+            player.wordObjects.forEach(w => {
+                if (w.isDropped || w.isDragging) return;
+
+                w.x += w.vx;
+                w.y += w.vy;
+
+                if (w.x <= 0) {
+                    w.x = 0; w.vx *= -1;
+                } else if (w.x + w.w >= bankRect.width) {
+                    w.x = Math.max(0, bankRect.width - w.w); w.vx *= -1;
+                }
+
+                if (w.y <= 0) {
+                    w.y = 0; w.vy *= -1;
+                } else if (w.y + w.h >= bankRect.height) {
+                    w.y = Math.max(0, bankRect.height - w.h); w.vy *= -1;
+                }
+
+                w.el.style.left = w.x + 'px';
+                w.el.style.top = w.y + 'px';
+            });
+
+            player.animFrameId = requestAnimationFrame(() => animateWords(player));
+        }
+
+        function attachPointerEvents(wordObj) {
+            const el = wordObj.el;
+            const player = wordObj.player;
+
+            el.addEventListener('click', (e) => {
+                if (wordObj.isDropped && !wordObj.isDragging) {
+                    returnToBank(wordObj);
+                    checkPlaceholder(player);
+                }
+            });
+
+            el.addEventListener('pointerdown', (e) => {
+                if (wordObj.isDropped) return; 
+
+                e.preventDefault();
+                wordObj.isDragging = true;
+                el.classList.add('dragging');
+                
+                const rect = el.getBoundingClientRect();
+                
+                // Daftarkan 'drag' ke dalam activeDrags menggunakan ID jari (pointerId)
+                activeDrags[e.pointerId] = {
+                    wordObj: wordObj,
+                    offsetX: e.clientX - rect.left,
+                    offsetY: e.clientY - rect.top
+                };
+
+                document.body.appendChild(el);
+                el.style.position = 'absolute';
+                moveElement(e.pointerId, e.clientX, e.clientY);
+            });
+        }
+
+        document.addEventListener('pointermove', (e) => {
+            if (activeDrags[e.pointerId]) {
+                e.preventDefault();
+                moveElement(e.pointerId, e.clientX, e.clientY);
+            }
+        });
+
+        function moveElement(pointerId, mouseX, mouseY) {
+            const dragInfo = activeDrags[pointerId];
+            if (!dragInfo) return;
+            dragInfo.wordObj.el.style.left = (mouseX - dragInfo.offsetX + window.scrollX) + 'px';
+            dragInfo.wordObj.el.style.top = (mouseY - dragInfo.offsetY + window.scrollY) + 'px';
+        }
+
+        document.addEventListener('pointerup', (e) => {
+            const dragInfo = activeDrags[e.pointerId];
+            if (!dragInfo) return;
+
+            const wObj = dragInfo.wordObj;
+            const player = wObj.player;
+
+            wObj.isDragging = false;
+            wObj.el.classList.remove('dragging');
+            delete activeDrags[e.pointerId];
+
+            const dropRect = player.elements.drop.getBoundingClientRect();
+            
+            if (
+                e.clientX >= dropRect.left && 
+                e.clientX <= dropRect.right && 
+                e.clientY >= dropRect.top && 
+                e.clientY <= dropRect.bottom
+            ) {
+                wObj.isDropped = true;
+                wObj.el.classList.remove('in-bank');
+                wObj.el.classList.add('in-dropzone');
+                wObj.el.style.position = ''; 
+                wObj.el.style.left = '';
+                wObj.el.style.top = '';
+                player.elements.drop.appendChild(wObj.el);
+            } else {
+                returnToBank(wObj, e.clientX, e.clientY);
+            }
+            
+            checkPlaceholder(player);
+        });
+
+        function returnToBank(wObj, mouseX = null, mouseY = null) {
+            const player = wObj.player;
+            wObj.isDropped = false;
+            wObj.el.classList.add('in-bank');
+            wObj.el.classList.remove('in-dropzone');
+            
+            player.elements.bank.appendChild(wObj.el);
+            wObj.el.style.position = 'absolute';
+
+            const bankRect = player.elements.bank.getBoundingClientRect();
+            
+            if (mouseX !== null && mouseY !== null) {
+                // Return to nearest bound if dropped outside
+                wObj.x = Math.max(0, Math.min(mouseX - bankRect.left, bankRect.width - wObj.w));
+                wObj.y = Math.max(0, Math.min(mouseY - bankRect.top, bankRect.height - wObj.h));
+            } else {
+                wObj.x = Math.random() * Math.max(10, bankRect.width - wObj.w - 10);
+                wObj.y = Math.random() * Math.max(10, bankRect.height - wObj.h - 10);
+            }
+
+            wObj.vx = getRandomVelocity();
+            wObj.vy = getRandomVelocity();
+
+            wObj.el.style.left = wObj.x + 'px';
+            wObj.el.style.top = wObj.y + 'px';
+        }
+
+        function checkPlaceholder(player) {
+            const hasWords = Array.from(player.elements.drop.children).some(el => el.classList.contains('word-tile'));
+            player.elements.placeholder.style.display = hasWords ? 'none' : 'block';
+        }
+
+        function setupPlayerControls(player) {
+            player.elements.btnCheck.addEventListener('click', () => {
+                const droppedElements = Array.from(player.elements.drop.children).filter(el => el.classList.contains('word-tile'));
+                const userSentence = droppedElements.map(el => el.dataset.text).join(" ");
+                
+                player.elements.feedback.style.opacity = '1';
+                
+                if (userSentence === player.currentSentence) {
+                    player.elements.feedback.innerText = "🎉 Tepat!";
+                    player.elements.feedback.className = "text-lg font-extrabold text-emerald-600 transition-opacity duration-300";
+                    
+                    player.score += 10;
+                    player.elements.scoreDisplay.innerText = player.score;
+                    
+                    player.elements.btnCheck.classList.add('hidden');
+                    player.elements.btnNext.classList.remove('hidden');
+                } else {
+                    player.elements.feedback.innerText = "❌ Salah, cuba lagi!";
+                    player.elements.feedback.className = "text-lg font-extrabold text-rose-500 transition-opacity duration-300";
+                    player.elements.drop.classList.add('animate-pulse');
+                    setTimeout(() => player.elements.drop.classList.remove('animate-pulse'), 500);
+                }
+            });
+
+            player.elements.btnNext.addEventListener('click', () => {
+                loadQuestionForPlayer(player);
+            });
+        }
+
+        // Initialize Game
+        window.addEventListener('load', () => {
+            setupPlayerControls(p1);
+            setupPlayerControls(p2);
+            loadQuestionForPlayer(p1);
+            loadQuestionForPlayer(p2);
+        });
+        
+        // Handle window resize gracefully for both players
+        window.addEventListener('resize', () => {
+            [p1, p2].forEach(player => {
+                const bankRect = player.elements.bank.getBoundingClientRect();
+                player.wordObjects.forEach(w => {
+                    if(!w.isDropped && !w.isDragging) {
+                        if(w.x + w.w > bankRect.width) w.x = Math.max(0, bankRect.width - w.w);
+                        if(w.y + w.h > bankRect.height) w.y = Math.max(0, bankRect.height - w.h);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
